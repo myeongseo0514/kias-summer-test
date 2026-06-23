@@ -28,7 +28,31 @@
     .subtitle {
       font-size: 0.85rem;
       color: #94a3b8;
+      margin-bottom: 14px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
       margin-bottom: 20px;
+    }
+
+    .nav a {
+      color: #cbd5e1;
+      background: #1a1d27;
+      border: 1px solid #2d3348;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+
+    .nav a[aria-current="page"] {
+      color: #fff;
+      background: #3b82f6;
+      border-color: #3b82f6;
     }
 
     .container {
@@ -147,6 +171,12 @@
 <body>
   <h1>이중진자 실험 시뮬레이션</h1>
   <p class="subtitle">Lagrange 방정식 · RK4 적분 · 에너지 보존 검증</p>
+
+  <nav class="nav" aria-label="시뮬레이션 이동">
+    <a href="index.html" aria-current="page">이중진자</a>
+    <a href="circular-motion.html">원운동</a>
+    <a href="projectile-motion.html">포물선 운동</a>
+  </nav>
 
   <div class="container">
     <div class="canvas-wrap">

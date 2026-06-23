@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포물선 운동 시뮬레이션</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #111418;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .nav a {
+      color: #cbd5e1;
+      background: #1d222b;
+      border: 1px solid #313947;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+
+    .nav a[aria-current="page"] {
+      color: #1b0b02;
+      background: #fb923c;
+      border-color: #fb923c;
+    }
+
+    .container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    .canvas-wrap {
+      background: #1d222b;
+      border: 1px solid #313947;
+      border-radius: 12px;
+      padding: 8px;
+      flex-shrink: 0;
+      max-width: 100%;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 8px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .controls {
+      background: #1d222b;
+      border: 1px solid #313947;
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 280px;
+      flex: 1;
+    }
+
+    .controls h2 {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.875rem;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+
+    .field label span {
+      color: #fb923c;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #fb923c;
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: #fb923c;
+      color: #1b0b02;
+    }
+
+    .btn-primary:hover { background: #f97316; }
+
+    .btn-secondary {
+      background: #313947;
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover { background: #465365; }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .readout div {
+      background: #111418;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 52px;
+    }
+
+    .readout strong {
+      display: block;
+      color: #fb923c;
+      font-size: 0.95rem;
+      margin-top: 3px;
+    }
+
+    .info {
+      margin-top: 16px;
+      padding: 12px;
+      background: #111418;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 18px 10px; }
+      .controls { min-width: 0; }
+      .readout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>포물선 운동 시뮬레이션</h1>
+  <p class="subtitle">초기 속도 · 발사각 · 중력에 따른 2차원 투사체 운동</p>
+
+  <nav class="nav" aria-label="시뮬레이션 이동">
+    <a href="index.html">이중진자</a>
+    <a href="circular-motion.html">원운동</a>
+    <a href="projectile-motion.html" aria-current="page">포물선 운동</a>
+  </nav>
+
+  <div class="container">
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="680" height="500"></canvas>
+    </div>
+
+    <div class="controls">
+      <h2>파라미터</h2>
+
+      <div class="field">
+        <label>초기 속도 v₀ (m/s) <span id="speedVal">28.0</span></label>
+        <input type="range" id="speed" min="5" max="60" step="0.5" value="28">
+      </div>
+
+      <div class="field">
+        <label>발사각 θ (°) <span id="angleVal">42</span></label>
+        <input type="range" id="angle" min="5" max="85" step="1" value="42">
+      </div>
+
+      <div class="field">
+        <label>초기 높이 h (m) <span id="heightVal">1.0</span></label>
+        <input type="range" id="height" min="0" max="20" step="0.5" value="1">
+      </div>
+
+      <div class="field">
+        <label>중력 g (m/s²) <span id="gravityVal">9.81</span></label>
+        <input type="range" id="gravity" min="1" max="20" step="0.1" value="9.81">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="resetBtn">초기화</button>
+        <button class="btn-secondary" id="pauseBtn">일시정지</button>
+      </div>
+
+      <div class="readout">
+        <div>시간 t<strong id="timeVal">0.00 s</strong></div>
+        <div>위치 (x, y)<strong id="positionVal">0.0, 0.0 m</strong></div>
+        <div>비행 시간<strong id="flightVal">0.00 s</strong></div>
+        <div>도달 거리<strong id="rangeVal">0.0 m</strong></div>
+        <div>최고 높이<strong id="maxHeightVal">0.0 m</strong></div>
+        <div>현재 속도<strong id="velocityVal">0.0 m/s</strong></div>
+      </div>
+
+      <div class="info">
+        공기 저항은 제외합니다. 수평 속도는 일정하고 수직 속도는 중력 때문에 매초 g만큼 감소합니다.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const MARGIN = 44;
+    const GROUND_Y = canvas.height - 58;
+    const TIME_SCALE = 0.85;
+
+    const sliders = {
+      speed: document.getElementById('speed'),
+      angle: document.getElementById('angle'),
+      height: document.getElementById('height'),
+      gravity: document.getElementById('gravity'),
+    };
+
+    const labels = {
+      speed: document.getElementById('speedVal'),
+      angle: document.getElementById('angleVal'),
+      height: document.getElementById('heightVal'),
+      gravity: document.getElementById('gravityVal'),
+      time: document.getElementById('timeVal'),
+      position: document.getElementById('positionVal'),
+      flight: document.getElementById('flightVal'),
+      range: document.getElementById('rangeVal'),
+      maxHeight: document.getElementById('maxHeightVal'),
+      velocity: document.getElementById('velocityVal'),
+    };
+
+    let speed = 28;
+    let angle = 42 * Math.PI / 180;
+    let height = 1;
+    let gravity = 9.81;
+    let elapsed = 0;
+    let lastTimestamp = null;
+    let running = true;
+    let path = [];
+    let scale = 8;
+    let flightTime = 0;
+    let range = 0;
+    let maxHeight = 0;
+
+    function solveFlightTime(vy) {
+      return (vy + Math.sqrt(vy * vy + 2 * gravity * height)) / gravity;
+    }
+
+    function recompute() {
+      speed = parseFloat(sliders.speed.value);
+      angle = parseFloat(sliders.angle.value) * Math.PI / 180;
+      height = parseFloat(sliders.height.value);
+      gravity = parseFloat(sliders.gravity.value);
+
+      const vx = speed * Math.cos(angle);
+      const vy = speed * Math.sin(angle);
+      flightTime = solveFlightTime(vy);
+      range = vx * flightTime;
+      maxHeight = height + (vy * vy) / (2 * gravity);
+
+      const usableWidth = canvas.width - MARGIN * 2;
+      const usableHeight = GROUND_Y - MARGIN;
+      scale = Math.min(usableWidth / Math.max(range, 1), usableHeight / Math.max(maxHeight, 1));
+      scale = Math.min(scale, 22);
+
+      labels.speed.textContent = speed.toFixed(1);
+      labels.angle.textContent = sliders.angle.value;
+      labels.height.textContent = height.toFixed(1);
+      labels.gravity.textContent = gravity.toFixed(2);
+      labels.flight.textContent = `${flightTime.toFixed(2)} s`;
+      labels.range.textContent = `${range.toFixed(1)} m`;
+      labels.maxHeight.textContent = `${maxHeight.toFixed(1)} m`;
+    }
+
+    function stateAt(t) {
+      const vx = speed * Math.cos(angle);
+      const vy0 = speed * Math.sin(angle);
+      const x = vx * t;
+      const y = height + vy0 * t - 0.5 * gravity * t * t;
+      const vy = vy0 - gravity * t;
+      return { x, y: Math.max(y, 0), vx, vy };
+    }
+
+    function toScreen(x, y) {
+      return {
+        x: MARGIN + x * scale,
+        y: GROUND_Y - y * scale,
+      };
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#27303d';
+      ctx.lineWidth = 1;
+      for (let x = MARGIN; x <= canvas.width - MARGIN; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, MARGIN);
+        ctx.lineTo(x, GROUND_Y);
+        ctx.stroke();
+      }
+      for (let y = GROUND_Y; y >= MARGIN; y -= 50) {
+        ctx.beginPath();
+        ctx.moveTo(MARGIN, y);
+        ctx.lineTo(canvas.width - MARGIN, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawArrow(fromX, fromY, toX, toY, color) {
+      const angleRad = Math.atan2(toY - fromY, toX - fromX);
+      const head = 10;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - head * Math.cos(angleRad - Math.PI / 6), toY - head * Math.sin(angleRad - Math.PI / 6));
+      ctx.lineTo(toX - head * Math.cos(angleRad + Math.PI / 6), toY - head * Math.sin(angleRad + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawFullTrajectory() {
+      ctx.setLineDash([6, 8]);
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 120; i++) {
+        const t = flightTime * i / 120;
+        const state = stateAt(t);
+        const point = toScreen(state.x, state.y);
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawPath() {
+      if (path.length < 2) return;
+      ctx.strokeStyle = '#fb923c';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(path[0].sx, path[0].sy);
+      for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(path[i].sx, path[i].sy);
+      }
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#111418';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN, GROUND_Y);
+      ctx.lineTo(canvas.width - MARGIN, GROUND_Y);
+      ctx.stroke();
+
+      const launch = toScreen(0, height);
+      const state = stateAt(Math.min(elapsed, flightTime));
+      const point = toScreen(state.x, state.y);
+
+      drawFullTrajectory();
+      drawPath();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(launch.x, launch.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const velocityLength = Math.min(90, 20 + Math.hypot(state.vx, state.vy) * 1.4);
+      const velocityAngle = Math.atan2(-state.vy, state.vx);
+      drawArrow(
+        point.x,
+        point.y,
+        point.x + Math.cos(velocityAngle) * velocityLength,
+        point.y + Math.sin(velocityAngle) * velocityLength,
+        '#38bdf8'
+      );
+      drawArrow(point.x + 24, point.y - 12, point.x + 24, point.y + 48, '#ef4444');
+
+      ctx.fillStyle = '#fb923c';
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fed7aa';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = '13px Segoe UI, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('v', point.x + 36, point.y - 18);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText('g', point.x + 34, point.y + 50);
+
+      labels.time.textContent = `${Math.min(elapsed, flightTime).toFixed(2)} s`;
+      labels.position.textContent = `${state.x.toFixed(1)}, ${state.y.toFixed(1)} m`;
+      labels.velocity.textContent = `${Math.hypot(state.vx, state.vy).toFixed(1)} m/s`;
+    }
+
+    function reset() {
+      elapsed = 0;
+      lastTimestamp = null;
+      path = [];
+      const start = toScreen(0, height);
+      path.push({ sx: start.x, sy: start.y });
+      draw();
+    }
+
+    function tick(timestamp) {
+      if (lastTimestamp === null) lastTimestamp = timestamp;
+      const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+      lastTimestamp = timestamp;
+
+      if (running && elapsed < flightTime) {
+        elapsed = Math.min(elapsed + dt * TIME_SCALE, flightTime);
+        const state = stateAt(elapsed);
+        const point = toScreen(state.x, state.y);
+        path.push({ sx: point.x, sy: point.y });
+      }
+
+      draw();
+      requestAnimationFrame(tick);
+    }
+
+    Object.values(sliders).forEach((slider) => {
+      slider.addEventListener('input', () => {
+        recompute();
+        reset();
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      running = !running;
+      document.getElementById('pauseBtn').textContent = running ? '일시정지' : '재생';
+      lastTimestamp = null;
+    });
+
+    recompute();
+    reset();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
