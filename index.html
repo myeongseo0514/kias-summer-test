@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>이중진자 실험 시뮬레이션</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .canvas-wrap {
+      background: #1a1d27;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 8px;
+    }
+
+    .controls {
+      background: #1a1d27;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 260px;
+      flex: 1;
+    }
+
+    .controls h2 {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+
+    .field label span {
+      color: #60a5fa;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #2563eb; }
+
+    .btn-secondary {
+      background: #2d3348;
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover { background: #3d4663; }
+
+    .info {
+      margin-top: 16px;
+      padding: 12px;
+      background: #0f1117;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    .energy {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .energy span { color: #34d399; }
+  </style>
+</head>
+<body>
+  <h1>이중진자 실험 시뮬레이션</h1>
+  <p class="subtitle">Lagrange 방정식 · RK4 적분 · 에너지 보존 검증</p>
+
+  <div class="container">
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="520" height="520"></canvas>
+    </div>
+
+    <div class="controls">
+      <h2>파라미터</h2>
+
+      <div class="field">
+        <label>질량 m₁ (kg) <span id="m1Val">1.0</span></label>
+        <input type="range" id="m1" min="0.1" max="5" step="0.1" value="1">
+      </div>
+
+      <div class="field">
+        <label>질량 m₂ (kg) <span id="m2Val">1.0</span></label>
+        <input type="range" id="m2" min="0.1" max="5" step="0.1" value="1">
+      </div>
+
+      <div class="field">
+        <label>길이 L₁ (m) <span id="l1Val">1.0</span></label>
+        <input type="range" id="l1" min="0.3" max="2" step="0.05" value="1">
+      </div>
+
+      <div class="field">
+        <label>길이 L₂ (m) <span id="l2Val">1.0</span></label>
+        <input type="range" id="l2" min="0.3" max="2" step="0.05" value="1">
+      </div>
+
+      <div class="field">
+        <label>중력 g (m/s²) <span id="gVal">9.81</span></label>
+        <input type="range" id="g" min="1" max="20" step="0.1" value="9.81">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="resetBtn">초기화</button>
+        <button class="btn-secondary" id="pauseBtn">일시정지</button>
+      </div>
+
+      <div class="energy">
+        총 에너지: <span id="energyVal">—</span> J<br>
+        드리프트: <span id="driftVal">—</span>
+      </div>
+
+      <div class="info">
+        운동은 Lagrange 방정식으로 계산하고 RK4로 적분합니다.
+        마우스로 진자를 드래그하여 초기 위치를 설정할 수 있습니다.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const SCALE = 140;
+    const ORIGIN_X = canvas.width / 2;
+    const ORIGIN_Y = canvas.height / 2 - 40;
+    const TRAIL_LEN = 400;
+    const DT = 1 / 120;
+
+    let m1 = 1, m2 = 1, l1 = 1, l2 = 1, g = 9.81;
+    let theta1 = Math.PI / 2;
+    let theta2 = Math.PI / 2;
+    let omega1 = 0;
+    let omega2 = 0;
+    let trail = [];
+    let running = true;
+    let dragging = null;
+    let initialEnergy = null;
+
+    const sliders = {
+      m1: document.getElementById('m1'),
+      m2: document.getElementById('m2'),
+      l1: document.getElementById('l1'),
+      l2: document.getElementById('l2'),
+      g: document.getElementById('g'),
+    };
+
+    const displays = {
+      m1: document.getElementById('m1Val'),
+      m2: document.getElementById('m2Val'),
+      l1: document.getElementById('l1Val'),
+      l2: document.getElementById('l2Val'),
+      g: document.getElementById('gVal'),
+    };
+
+    function getPositions() {
+      const x1 = ORIGIN_X + l1 * SCALE * Math.sin(theta1);
+      const y1 = ORIGIN_Y + l1 * SCALE * Math.cos(theta1);
+      const x2 = x1 + l2 * SCALE * Math.sin(theta2);
+      const y2 = y1 + l2 * SCALE * Math.cos(theta2);
+      return { x1, y1, x2, y2 };
+    }
+
+  // Lagrange 방정식: 이중진자 각가속도
+    function accelerations(t1, t2, w1, w2) {
+      const sin1 = Math.sin(t1);
+      const sin2 = Math.sin(t2);
+      const cos1 = Math.cos(t1);
+      const cos2 = Math.cos(t2);
+      const sinDiff = Math.sin(t1 - t2);
+      const cosDiff = Math.cos(t1 - t2);
+      const cos2Diff = Math.cos(2 * t1 - 2 * t2);
+
+      const den = 2 * m1 + m2 - m2 * cos2Diff;
+
+      const num1 = -g * (2 * m1 + m2) * sin1
+        - m2 * g * Math.sin(t1 - 2 * t2)
+        - 2 * sinDiff * m2 * (w2 * w2 * l2 + w1 * w1 * l1 * cosDiff);
+
+      const num2 = 2 * sinDiff * (
+        w1 * w1 * l1 * (m1 + m2)
+        + g * (m1 + m2) * cos1
+        + w2 * w2 * l2 * m2 * cosDiff
+      );
+
+      return {
+        alpha1: num1 / (l1 * den),
+        alpha2: num2 / (l2 * den),
+      };
+    }
+
+    function derivatives(state) {
+      const [t1, t2, w1, w2] = state;
+      const { alpha1, alpha2 } = accelerations(t1, t2, w1, w2);
+      return [w1, w2, alpha1, alpha2];
+    }
+
+    function rk4Step(state, dt) {
+      const k1 = derivatives(state);
+      const s2 = state.map((v, i) => v + k1[i] * dt / 2);
+      const k2 = derivatives(s2);
+      const s3 = state.map((v, i) => v + k2[i] * dt / 2);
+      const k3 = derivatives(s3);
+      const s4 = state.map((v, i) => v + k3[i] * dt);
+      const k4 = derivatives(s4);
+      return state.map((v, i) =>
+        v + (dt / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])
+      );
+    }
+
+    function kineticEnergy() {
+      const vx1 = l1 * omega1 * Math.cos(theta1);
+      const vy1 = l1 * omega1 * Math.sin(theta1);
+      const vx2 = vx1 + l2 * omega2 * Math.cos(theta2);
+      const vy2 = vy1 + l2 * omega2 * Math.sin(theta2);
+      const v1Sq = vx1 * vx1 + vy1 * vy1;
+      const v2Sq = vx2 * vx2 + vy2 * vy2;
+      return 0.5 * m1 * v1Sq + 0.5 * m2 * v2Sq;
+    }
+
+    function potentialEnergy() {
+      const y1M = l1 * Math.cos(theta1);
+      const y2M = y1M + l2 * Math.cos(theta2);
+      return m1 * g * y1M + m2 * g * y2M;
+    }
+
+    function totalEnergy() {
+      return kineticEnergy() + potentialEnergy();
+    }
+
+    function updateParams() {
+      m1 = parseFloat(sliders.m1.value);
+      m2 = parseFloat(sliders.m2.value);
+      l1 = parseFloat(sliders.l1.value);
+      l2 = parseFloat(sliders.l2.value);
+      g = parseFloat(sliders.g.value);
+      displays.m1.textContent = m1.toFixed(1);
+      displays.m2.textContent = m2.toFixed(1);
+      displays.l1.textContent = l1.toFixed(2);
+      displays.l2.textContent = l2.toFixed(2);
+      displays.g.textContent = g.toFixed(1);
+    }
+
+    function reset() {
+      theta1 = Math.PI / 2 + 0.3;
+      theta2 = Math.PI / 2 - 0.5;
+      omega1 = 0;
+      omega2 = 0;
+      trail = [];
+      initialEnergy = totalEnergy();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0f1117';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 격자
+      ctx.strokeStyle = '#1e2433';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+      for (let j = 0; j < canvas.height; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(canvas.width, j);
+        ctx.stroke();
+      }
+
+      const { x1, y1, x2, y2 } = getPositions();
+
+      // 궤적
+      if (trail.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i++) {
+          ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.strokeStyle = 'rgba(96, 165, 250, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // 고정점
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(ORIGIN_X, ORIGIN_Y, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 막대
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(ORIGIN_X, ORIGIN_Y);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // 질량 m1
+      const r1 = 8 + m1 * 4;
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(x1, y1, r1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 질량 m2
+      const r2 = 8 + m2 * 4;
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.arc(x2, y2, r2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 에너지 표시
+      const E = totalEnergy();
+      document.getElementById('energyVal').textContent = E.toFixed(3);
+      if (initialEnergy !== null) {
+        const drift = ((E - initialEnergy) / initialEnergy) * 100;
+        document.getElementById('driftVal').textContent =
+          drift.toFixed(4) + ' %';
+      }
+    }
+
+    function simulate() {
+      if (running && !dragging) {
+        for (let i = 0; i < 2; i++) {
+          const state = rk4Step([theta1, theta2, omega1, omega2], DT);
+          theta1 = state[0];
+          theta2 = state[1];
+          omega1 = state[2];
+          omega2 = state[3];
+        }
+
+        const { x2, y2 } = getPositions();
+        trail.push({ x: x2, y: y2 });
+        if (trail.length > TRAIL_LEN) trail.shift();
+      }
+
+      draw();
+      requestAnimationFrame(simulate);
+    }
+
+    function screenToAngle(x, y, pivotX, pivotY, length) {
+      const dx = x - pivotX;
+      const dy = y - pivotY;
+      return Math.atan2(dx, dy);
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const { x1, y1, x2, y2 } = getPositions();
+
+      const d2 = (mx - x2) ** 2 + (my - y2) ** 2;
+      const d1 = (mx - x1) ** 2 + (my - y1) ** 2;
+
+      if (d2 < 900) {
+        dragging = 'm2';
+        omega1 = 0;
+        omega2 = 0;
+      } else if (d1 < 900) {
+        dragging = 'm1';
+        omega1 = 0;
+        omega2 = 0;
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      if (dragging === 'm1') {
+        theta1 = screenToAngle(mx, my, ORIGIN_X, ORIGIN_Y, l1);
+      } else {
+        const { x1, y1 } = getPositions();
+        theta2 = screenToAngle(mx, my, x1, y1, l2);
+      }
+      trail = [];
+      initialEnergy = totalEnergy();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = null;
+        initialEnergy = totalEnergy();
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+    Object.keys(sliders).forEach((key) => {
+      sliders[key].addEventListener('input', () => {
+        updateParams();
+        initialEnergy = totalEnergy();
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      running = !running;
+      document.getElementById('pauseBtn').textContent =
+        running ? '일시정지' : '재생';
+    });
+
+    updateParams();
+    reset();
+    simulate();
+  </script>
+</body>
+</html>
