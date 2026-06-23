@@ -1,6 +1,6 @@
 # 물리 운동 시뮬레이션
 
-브라우저에서 바로 실행할 수 있는 물리 운동 시뮬레이션 모음입니다. 이중진자, 원운동, 포물선 운동을 각각 독립 HTML 페이지로 제공합니다.
+브라우저에서 바로 실행할 수 있는 물리 운동 시뮬레이션 모음입니다. 이중진자, 원운동, 포물선 운동, 원운동 구동 이중진자를 각각 독립 HTML 페이지로 제공합니다.
 
 ## 실행 방법
 
@@ -11,11 +11,13 @@
 start index.html
 start circular-motion.html
 start projectile-motion.html
+start driven-double-pendulum.html
 
 # macOS
 open index.html
 open circular-motion.html
 open projectile-motion.html
+open driven-double-pendulum.html
 ```
 
 또는 파일을 더블 클릭하여 기본 브라우저로 열 수 있습니다.
@@ -29,6 +31,7 @@ open projectile-motion.html
 | `index.html` | 이중진자 운동 | Lagrange 방정식, RK4 적분, 에너지 보존 검증 |
 | `circular-motion.html` | 원운동 | 등속 원운동, 속도 벡터, 구심가속도, 구심력 |
 | `projectile-motion.html` | 포물선 운동 | 초기 속도, 발사각, 중력, 비행 시간, 도달 거리 |
+| `driven-double-pendulum.html` | 원운동 구동 이중진자 | 원 궤도를 도는 지지점, 유효 중력, 강제 진동 |
 
 ### 조절 가능한 파라미터
 
@@ -58,7 +61,7 @@ open projectile-motion.html
 
 ## 물리 모델
 
-세 시뮬레이션은 모두 질점을 대상으로 하며, 별도로 언급하지 않는 한 공기 저항과 마찰은 무시합니다. 중력 가속도 $g$는 시간과 위치에 따라 변하지 않는 상수로 둡니다.
+네 시뮬레이션은 모두 질점을 대상으로 하며, 별도로 언급하지 않는 한 공기 저항과 마찰은 무시합니다. 중력 가속도 $g$는 시간과 위치에 따라 변하지 않는 상수로 둡니다.
 
 ### 1. 이중진자 운동
 
@@ -241,7 +244,85 @@ $$
 \frac{E-E_0}{E_0}\times 100\,\%
 $$
 
-### 2. 원운동
+### 2. 원운동 구동 이중진자
+
+`driven-double-pendulum.html`은 이중진자의 지지점 자체가 원운동하는 경우를 다룹니다. 지지점의 위치를
+
+$$
+\mathbf{r}_p(t)
+=
+\begin{pmatrix}
+A\cos\Omega t \\
+A\sin\Omega t
+\end{pmatrix}
+$$
+
+로 두면, 지지점의 가속도는
+
+$$
+\mathbf{a}_p(t)
+=
+\begin{pmatrix}
+-A\Omega^2\cos\Omega t \\
+-A\Omega^2\sin\Omega t
+\end{pmatrix}
+$$
+
+입니다. 지지점과 함께 움직이는 좌표계에서 보면, 이 가속도는 관성력으로 나타납니다. 따라서 진자가 느끼는 유효 중력은
+
+$$
+\mathbf{g}_{\mathrm{eff}}(t)
+=
+\mathbf{g} - \mathbf{a}_p(t)
+$$
+
+입니다. 화면 좌표처럼 아래 방향을 양의 $y$축으로 잡으면
+
+$$
+\mathbf{g} =
+\begin{pmatrix}
+0 \\
+g
+\end{pmatrix}
+$$
+
+이므로,
+
+$$
+g_{\mathrm{eff},x}=A\Omega^2\cos\Omega t
+$$
+
+$$
+g_{\mathrm{eff},y}=g+A\Omega^2\sin\Omega t
+$$
+
+입니다. 즉 구동점이 원운동하면서 진자에 작용하는 유효 중력의 방향과 크기가 계속 변합니다.
+
+두 각도 $\theta_1$, $\theta_2$에 대한 질량행렬은
+
+$$
+M =
+\begin{pmatrix}
+(m_1+m_2)L_1^2 & m_2L_1L_2\cos(\theta_1-\theta_2) \\
+m_2L_1L_2\cos(\theta_1-\theta_2) & m_2L_2^2
+\end{pmatrix}
+$$
+
+입니다. 각가속도 벡터 $\boldsymbol{\alpha}=(\alpha_1,\alpha_2)$는
+
+$$
+M\boldsymbol{\alpha} =
+\begin{pmatrix}
+(m_1+m_2)L_1(g_x\cos\theta_1-g_y\sin\theta_1)
+-m_2L_1L_2\sin(\theta_1-\theta_2)\omega_2^2 \\
+m_2L_2(g_x\cos\theta_2-g_y\sin\theta_2)
++m_2L_1L_2\sin(\theta_1-\theta_2)\omega_1^2
+\end{pmatrix}
+$$
+
+를 풀어 계산합니다. 여기서 $g_x$, $g_y$는 유효 중력 $\mathbf{g}_{\mathrm{eff}}$의 성분입니다. 지지점이 외부에서 에너지를 주고받기 때문에, 이 시스템의 상대 에너지는 일반적으로 보존되지 않습니다.
+
+### 3. 원운동
 
 원운동 시뮬레이션은 반지름 $R$인 원 위를 질량 $m$인 물체가 일정한 각속도 $\omega$로 움직이는 등속 원운동을 다룹니다.
 
@@ -334,7 +415,7 @@ T = \frac{2\pi}{|\omega|},\quad
 f = \frac{1}{T} = \frac{|\omega|}{2\pi}
 $$
 
-### 3. 포물선 운동
+### 4. 포물선 운동
 
 포물선 운동 시뮬레이션은 초기 높이 $h$에서 속력 $v_0$, 발사각 $\theta$로 던진 물체의 2차원 운동을 다룹니다. 공기 저항이 없다고 가정하면 수평 방향과 수직 방향 운동을 분리해서 계산할 수 있습니다.
 
@@ -464,6 +545,7 @@ $$
 ├── index.html               # 이중진자 시뮬레이션
 ├── circular-motion.html     # 원운동 시뮬레이션
 ├── projectile-motion.html   # 포물선 운동 시뮬레이션
+├── driven-double-pendulum.html # 원운동 구동 이중진자 시뮬레이션
 ├── AGENTS.md                # 프로젝트 요구사항
 └── README.md                # 이 문서
 ```
@@ -476,4 +558,4 @@ $$
 
 ## 참고
 
-이중진자는 카오스 시스템의 대표적인 예입니다. 초기 조건에 매우 민감하게 반응하여, 약간의 각도 차이만으로도 궤적이 크게 달라집니다. 원운동과 포물선 운동 페이지에서는 기본적인 해석 역학 관계를 시각적으로 확인할 수 있습니다.
+이중진자는 카오스 시스템의 대표적인 예입니다. 초기 조건에 매우 민감하게 반응하여, 약간의 각도 차이만으로도 궤적이 크게 달라집니다. 원운동 구동 이중진자는 여기에 시간에 따라 변하는 외부 구동까지 더해진 강제 비선형 시스템입니다. 원운동과 포물선 운동 페이지에서는 기본적인 해석 역학 관계를 시각적으로 확인할 수 있습니다.

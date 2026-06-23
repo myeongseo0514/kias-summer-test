@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>원운동 구동 이중진자 시뮬레이션</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #111318;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .nav a {
+      color: #cbd5e1;
+      background: #1b1f2a;
+      border: 1px solid #30384a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+
+    .nav a[aria-current="page"] {
+      color: #140605;
+      background: #f472b6;
+      border-color: #f472b6;
+    }
+
+    .container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1120px;
+      width: 100%;
+    }
+
+    .canvas-wrap {
+      background: #1b1f2a;
+      border: 1px solid #30384a;
+      border-radius: 12px;
+      padding: 8px;
+      flex-shrink: 0;
+      max-width: 100%;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 8px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .controls {
+      background: #1b1f2a;
+      border: 1px solid #30384a;
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 300px;
+      flex: 1;
+    }
+
+    .controls h2 {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.875rem;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+
+    .field label span {
+      color: #f472b6;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #f472b6;
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: #f472b6;
+      color: #140605;
+    }
+
+    .btn-primary:hover { background: #ec4899; }
+
+    .btn-secondary {
+      background: #30384a;
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover { background: #465268; }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .readout div {
+      background: #111318;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 52px;
+    }
+
+    .readout strong {
+      display: block;
+      color: #f472b6;
+      font-size: 0.95rem;
+      margin-top: 3px;
+    }
+
+    .info {
+      margin-top: 16px;
+      padding: 12px;
+      background: #111318;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 18px 10px; }
+      .controls { min-width: 0; }
+      .readout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>원운동 구동 이중진자 시뮬레이션</h1>
+  <p class="subtitle">원 궤도를 도는 지지점 · 비관성계 유효 중력 · RK4 적분</p>
+
+  <nav class="nav" aria-label="시뮬레이션 이동">
+    <a href="index.html">이중진자</a>
+    <a href="circular-motion.html">원운동</a>
+    <a href="projectile-motion.html">포물선 운동</a>
+    <a href="driven-double-pendulum.html" aria-current="page">구동 이중진자</a>
+  </nav>
+
+  <div class="container">
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="680" height="620"></canvas>
+    </div>
+
+    <div class="controls">
+      <h2>파라미터</h2>
+
+      <div class="field">
+        <label>구동 반지름 A (m) <span id="driveRadiusVal">0.55</span></label>
+        <input type="range" id="driveRadius" min="0" max="1" step="0.05" value="0.55">
+      </div>
+
+      <div class="field">
+        <label>구동 각속도 Ω (rad/s) <span id="driveOmegaVal">1.30</span></label>
+        <input type="range" id="driveOmega" min="-3" max="3" step="0.05" value="1.3">
+      </div>
+
+      <div class="field">
+        <label>질량 m₁ (kg) <span id="m1Val">1.0</span></label>
+        <input type="range" id="m1" min="0.1" max="5" step="0.1" value="1">
+      </div>
+
+      <div class="field">
+        <label>질량 m₂ (kg) <span id="m2Val">1.0</span></label>
+        <input type="range" id="m2" min="0.1" max="5" step="0.1" value="1">
+      </div>
+
+      <div class="field">
+        <label>길이 L₁ (m) <span id="l1Val">1.10</span></label>
+        <input type="range" id="l1" min="0.4" max="1.6" step="0.05" value="1.1">
+      </div>
+
+      <div class="field">
+        <label>길이 L₂ (m) <span id="l2Val">1.05</span></label>
+        <input type="range" id="l2" min="0.4" max="1.6" step="0.05" value="1.05">
+      </div>
+
+      <div class="field">
+        <label>중력 g (m/s²) <span id="gVal">9.81</span></label>
+        <input type="range" id="g" min="1" max="20" step="0.1" value="9.81">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="resetBtn">초기화</button>
+        <button class="btn-secondary" id="pauseBtn">일시정지</button>
+      </div>
+
+      <div class="readout">
+        <div>시간 t<strong id="timeVal">0.00 s</strong></div>
+        <div>구동 위상 φ<strong id="phaseVal">0.0°</strong></div>
+        <div>유효 중력 |g_eff|<strong id="effectiveGVal">9.81 m/s²</strong></div>
+        <div>상대 에너지<strong id="energyVal">0.000 J</strong></div>
+      </div>
+
+      <div class="info">
+        지지점의 원운동 가속도는 진자 기준 좌표계에서 유효 중력
+        g_eff = g - a_pivot 형태로 작용합니다. 외부 구동이 에너지를 주고받기 때문에
+        상대 에너지는 보존량이 아닙니다.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const SCALE = 90;
+    const CENTER_X = canvas.width / 2;
+    const CENTER_Y = 210;
+    const DT = 1 / 180;
+    const STEPS_PER_FRAME = 3;
+    const TRAIL_LIMIT = 520;
+
+    let driveRadius = 0.55;
+    let driveOmega = 1.3;
+    let m1 = 1;
+    let m2 = 1;
+    let l1 = 1.1;
+    let l2 = 1.05;
+    let g = 9.81;
+    let theta1 = Math.PI / 2 + 0.35;
+    let theta2 = Math.PI / 2 - 0.45;
+    let omega1 = 0;
+    let omega2 = 0;
+    let simTime = 0;
+    let running = true;
+    let dragging = null;
+    let trail = [];
+
+    const sliders = {
+      driveRadius: document.getElementById('driveRadius'),
+      driveOmega: document.getElementById('driveOmega'),
+      m1: document.getElementById('m1'),
+      m2: document.getElementById('m2'),
+      l1: document.getElementById('l1'),
+      l2: document.getElementById('l2'),
+      g: document.getElementById('g'),
+    };
+
+    const values = {
+      driveRadius: document.getElementById('driveRadiusVal'),
+      driveOmega: document.getElementById('driveOmegaVal'),
+      m1: document.getElementById('m1Val'),
+      m2: document.getElementById('m2Val'),
+      l1: document.getElementById('l1Val'),
+      l2: document.getElementById('l2Val'),
+      g: document.getElementById('gVal'),
+      time: document.getElementById('timeVal'),
+      phase: document.getElementById('phaseVal'),
+      effectiveG: document.getElementById('effectiveGVal'),
+      energy: document.getElementById('energyVal'),
+    };
+
+    function updateParams() {
+      driveRadius = parseFloat(sliders.driveRadius.value);
+      driveOmega = parseFloat(sliders.driveOmega.value);
+      m1 = parseFloat(sliders.m1.value);
+      m2 = parseFloat(sliders.m2.value);
+      l1 = parseFloat(sliders.l1.value);
+      l2 = parseFloat(sliders.l2.value);
+      g = parseFloat(sliders.g.value);
+
+      values.driveRadius.textContent = driveRadius.toFixed(2);
+      values.driveOmega.textContent = driveOmega.toFixed(2);
+      values.m1.textContent = m1.toFixed(1);
+      values.m2.textContent = m2.toFixed(1);
+      values.l1.textContent = l1.toFixed(2);
+      values.l2.textContent = l2.toFixed(2);
+      values.g.textContent = g.toFixed(2);
+    }
+
+    function driveAt(t) {
+      const phase = driveOmega * t;
+      return {
+        phase,
+        x: CENTER_X + driveRadius * SCALE * Math.cos(phase),
+        y: CENTER_Y + driveRadius * SCALE * Math.sin(phase),
+        ax: -driveRadius * driveOmega * driveOmega * Math.cos(phase),
+        ay: -driveRadius * driveOmega * driveOmega * Math.sin(phase),
+      };
+    }
+
+    function positions(t = simTime, t1 = theta1, t2 = theta2) {
+      const pivot = driveAt(t);
+      const x1 = pivot.x + l1 * SCALE * Math.sin(t1);
+      const y1 = pivot.y + l1 * SCALE * Math.cos(t1);
+      const x2 = x1 + l2 * SCALE * Math.sin(t2);
+      const y2 = y1 + l2 * SCALE * Math.cos(t2);
+      return { pivot, x1, y1, x2, y2 };
+    }
+
+    function accelerations(t1, t2, w1, w2, t) {
+      const pivot = driveAt(t);
+      const bx = -pivot.ax;
+      const by = g - pivot.ay;
+      const delta = t1 - t2;
+      const sinDelta = Math.sin(delta);
+      const cosDelta = Math.cos(delta);
+      const c = m2 * l1 * l2;
+
+      const M11 = (m1 + m2) * l1 * l1;
+      const M12 = c * cosDelta;
+      const M22 = m2 * l2 * l2;
+      const rhs1 = (m1 + m2) * l1 * (bx * Math.cos(t1) - by * Math.sin(t1))
+        - c * sinDelta * w2 * w2;
+      const rhs2 = m2 * l2 * (bx * Math.cos(t2) - by * Math.sin(t2))
+        + c * sinDelta * w1 * w1;
+      const det = M11 * M22 - M12 * M12;
+
+      return {
+        alpha1: (rhs1 * M22 - rhs2 * M12) / det,
+        alpha2: (M11 * rhs2 - M12 * rhs1) / det,
+        effectiveG: Math.hypot(bx, by),
+      };
+    }
+
+    function derivatives(state, t) {
+      const [t1, t2, w1, w2] = state;
+      const { alpha1, alpha2 } = accelerations(t1, t2, w1, w2, t);
+      return [w1, w2, alpha1, alpha2];
+    }
+
+    function rk4Step(state, t, dt) {
+      const k1 = derivatives(state, t);
+      const s2 = state.map((v, i) => v + k1[i] * dt / 2);
+      const k2 = derivatives(s2, t + dt / 2);
+      const s3 = state.map((v, i) => v + k2[i] * dt / 2);
+      const k3 = derivatives(s3, t + dt / 2);
+      const s4 = state.map((v, i) => v + k3[i] * dt);
+      const k4 = derivatives(s4, t + dt);
+      return state.map((v, i) =>
+        v + (dt / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])
+      );
+    }
+
+    function relativeEnergy() {
+      const delta = theta1 - theta2;
+      const kinetic = 0.5 * (m1 + m2) * l1 * l1 * omega1 * omega1
+        + 0.5 * m2 * l2 * l2 * omega2 * omega2
+        + m2 * l1 * l2 * omega1 * omega2 * Math.cos(delta);
+      const potential = -((m1 + m2) * g * l1 * Math.cos(theta1)
+        + m2 * g * l2 * Math.cos(theta2));
+      return kinetic + potential;
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#232a38';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawArrow(fromX, fromY, toX, toY, color) {
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      const head = 9;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - head * Math.cos(angle - Math.PI / 6), toY - head * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - head * Math.cos(angle + Math.PI / 6), toY - head * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+
+      const { pivot, x1, y1, x2, y2 } = positions();
+      const driveCircleRadius = driveRadius * SCALE;
+
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath();
+      ctx.arc(CENTER_X, CENTER_Y, driveCircleRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (trail.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i++) {
+          ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.strokeStyle = 'rgba(244, 114, 182, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pivot.x, pivot.y);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(CENTER_X, CENTER_Y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(pivot.x, pivot.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fbcfe8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(x1, y1, 9 + m1 * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(x2, y2, 9 + m2 * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7dd3fc';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const { effectiveG } = accelerations(theta1, theta2, omega1, omega2, simTime);
+      const drivePhaseDeg = ((pivot.phase * 180 / Math.PI) % 360 + 360) % 360;
+      const arrowBaseX = 68;
+      const arrowBaseY = 82;
+      const geff = {
+        x: -pivot.ax,
+        y: g - pivot.ay,
+      };
+      const geffLength = Math.hypot(geff.x, geff.y) || 1;
+      drawArrow(
+        arrowBaseX,
+        arrowBaseY,
+        arrowBaseX + (geff.x / geffLength) * 46,
+        arrowBaseY + (geff.y / geffLength) * 46,
+        '#f472b6'
+      );
+
+      ctx.font = '13px Segoe UI, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('g_eff', arrowBaseX + 10, arrowBaseY - 10);
+      ctx.fillText('pivot path', CENTER_X + driveCircleRadius + 10, CENTER_Y - 6);
+
+      values.time.textContent = `${simTime.toFixed(2)} s`;
+      values.phase.textContent = `${drivePhaseDeg.toFixed(1)}°`;
+      values.effectiveG.textContent = `${effectiveG.toFixed(2)} m/s²`;
+      values.energy.textContent = `${relativeEnergy().toFixed(3)} J`;
+    }
+
+    function reset() {
+      simTime = 0;
+      theta1 = Math.PI / 2 + 0.35;
+      theta2 = Math.PI / 2 - 0.45;
+      omega1 = 0;
+      omega2 = 0;
+      trail = [];
+      draw();
+    }
+
+    function stepSimulation() {
+      for (let i = 0; i < STEPS_PER_FRAME; i++) {
+        const state = rk4Step([theta1, theta2, omega1, omega2], simTime, DT);
+        theta1 = state[0];
+        theta2 = state[1];
+        omega1 = state[2];
+        omega2 = state[3];
+        simTime += DT;
+      }
+      const { x2, y2 } = positions();
+      trail.push({ x: x2, y: y2 });
+      if (trail.length > TRAIL_LIMIT) trail.shift();
+    }
+
+    function animate() {
+      if (running && !dragging) stepSimulation();
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    function angleFromMouse(x, y, px, py) {
+      return Math.atan2(x - px, y - py);
+    }
+
+    canvas.addEventListener('mousedown', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+      const { x1, y1, x2, y2 } = positions();
+      const d2 = (mx - x2) ** 2 + (my - y2) ** 2;
+      const d1 = (mx - x1) ** 2 + (my - y1) ** 2;
+      if (d2 < 900) {
+        dragging = 'm2';
+        omega1 = 0;
+        omega2 = 0;
+      } else if (d1 < 900) {
+        dragging = 'm1';
+        omega1 = 0;
+        omega2 = 0;
+      }
+    });
+
+    canvas.addEventListener('mousemove', (event) => {
+      if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+      const { pivot, x1, y1 } = positions();
+      if (dragging === 'm1') {
+        theta1 = angleFromMouse(mx, my, pivot.x, pivot.y);
+      } else {
+        theta2 = angleFromMouse(mx, my, x1, y1);
+      }
+      trail = [];
+    });
+
+    canvas.addEventListener('mouseup', () => { dragging = null; });
+    canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+    Object.values(sliders).forEach((slider) => {
+      slider.addEventListener('input', () => {
+        updateParams();
+        trail = [];
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      running = !running;
+      document.getElementById('pauseBtn').textContent = running ? '일시정지' : '재생';
+    });
+
+    updateParams();
+    reset();
+    animate();
+  </script>
+</body>
+</html>
